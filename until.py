@@ -1,17 +1,21 @@
+'''
+Needs lots of documentation.   Examples.
+'''
 import functools
 
 
 
 def repeat_until_satisfied(ok, max_tries=5, 
         bad_outcome = lambda mt, r, *a, **k: 'no good result: %s attempts' % mt,
-        report = lambda *a, **k: None,
+        report      = lambda *a, **k: None,
         end_of_loop = lambda *a, **k: None,
     ): 
     '''
     ok:  a predicate,  returns truthiness.
-    bad_outcome: a function
-    report: a function
-    end_of_loop: a function
+    max_tries: int > 0
+    bad_outcome: a function,    default: message string
+    report: a function,         default == no op
+    end_of_loop: a function,    default: no op
     '''
     def outer(func):
         @functools.wraps(func)
@@ -32,12 +36,27 @@ def repeat_until_satisfied(ok, max_tries=5,
 
 class Repeat(object):
     class Until(object):
-        satisfied = repeat_until_satisfied
+        satisfied = staticmethod(repeat_until_satisfied)
     until = Until()
 
 repeat = Repeat()
 until_satisfied = repeat_until_satisfied
+satisfied = repeat_until_satisfied
+ok = lambda res:res
 
+@repeat_until_satisfied(ok)
+def one():
+    return 1
 
+@until_satisfied(ok)
+def two():
+    return 2
+
+@repeat.until.satisfied(ok)
+def three():
+    return 3
+
+def bun():
+    return 'b'
 
 
