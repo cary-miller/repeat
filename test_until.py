@@ -1,8 +1,10 @@
-
+#!  /usr/bin/env python
+#############!  ../../project/ve1/bin/python2.7
+print 'yoohoo'
 import random
 import time
 import unittest
-import mock
+#import mock
 #from until import repeat
 #repeat_until_satisfied = repeat.until.satisfied
 from until import repeat_until_satisfied 
@@ -25,41 +27,45 @@ def report(func, i, max_tries, response, *pos, **kw):
 
 
 end_of_loop = lambda *a, **k: time.sleep(0.01)
-sc1 = lambda r: r.status_code in [200]
-sc2 = lambda r: r.status_code in [200, 201]
-lt2 = lambda r: r < 2
+#sc1 = lambda r: r.status_code in [200]
+#sc2 = lambda r: r.status_code in [200, 201]
+#lt2 = lambda r: r < 2
 eq5 = lambda r: r == 5
 boa = lambda m, r: ('bo', r, m)
+bo_returns_tuple = lambda m, r: ('bo', r, m)
 bob = lambda m, r: 'not satisfied'
-try_harder = repeat_until_satisfied(lt2, max_tries=3, bad_outcome = boa)
+bo_returns_string = lambda m, r: 'not satisfied'
+#ry_harder = repeat_until_satisfied(lt2, max_tries=3, bad_outcome = boa)
 generic = lambda: random.choice(range(11))
 one = lambda:1
+always_1 = lambda:1
+always_returns_1 = lambda:1
 
 
-@repeat_until_satisfied(sc1, max_tries=2)
-def generala(url):
-    return make_request(url)
-
-
-@repeat_until_satisfied(sc2, max_tries=4)
-def generalb(url):
-    return make_request(url)
-
-
-@repeat_until_satisfied(lt2, max_tries=3)
-def generalc():
-    return generic()
-
-
-@repeat_until_satisfied(lt2, max_tries=3, bad_outcome = bob)
-def generald():
-    return generic()
-
-
-@try_harder
-def generale():
-    return generic()
-
+#@repeat_until_satisfied(sc1, max_tries=2)
+#def generala(url):
+#    return make_request(url)
+#
+#
+#@repeat_until_satisfied(sc2, max_tries=4)
+#def generalb(url):
+#    return make_request(url)
+#
+#
+#@repeat_until_satisfied(lt2, max_tries=3)
+#def generalc():
+#    return generic()
+#
+#
+#@repeat_until_satisfied(lt2, max_tries=3, bad_outcome = bob)
+#def generald():
+#    return generic()
+#
+#
+#@try_harder
+#def generale():
+#    return generic()
+#
 
 
 ############################################################################
@@ -72,18 +78,30 @@ def eolb(i, max_tries, result, *pos, **kw):
     msg = '%s/%s %s %s %s' %(i, max_tries, result, str(pos), str(kw))
     print msg
 eolc = lambda *a, **k: time.sleep(0.1)
+return_value_is_5 = lambda r: r==5
 
 
 def test_report(reportfunc):
-    return repeat_until_satisfied(lambda r: r==5, report = reportfunc)
+    '''Repeat until function returns 5.
+    '''
+    return repeat_until_satisfied(return_value_is_5, report = reportfunc)
 
 
 def test_end_of_loop(eolfunc):
-    return repeat_until_satisfied(lambda r: r==5, end_of_loop = eolfunc)
+    '''Repeat until function returns 5.
+    '''
+    return repeat_until_satisfied(return_value_is_5, end_of_loop = eolfunc)
 
 
-def test_bad_outcome(bofunc):
-    return repeat_until_satisfied(lambda r: r==5, bad_outcome = bofunc)
+def test_bad_outcome(bofunc): pass
+def test_bad_outcome(bofunc): pass
+
+
+def want_return_eq_5(bofunc):
+    '''Repeat until function returns 5.
+    '''
+    return repeat_until_satisfied(return_value_is_5, bad_outcome = bofunc)
+
 
 
 class FooBase(unittest.TestCase):
@@ -98,11 +116,18 @@ class FooBase(unittest.TestCase):
 class FooTest(FooBase):
 
     def test_bad_outcome(self):
-        self.assertEqual(test_bad_outcome(bob)(one)(), 'not satisfied')
-        self.assertEqual(test_bad_outcome(boa)(one)(), ('bo', 1, 5))
+        # Verify we get the correct return value when the funtion is
+        # not satisfied (non-satisfiable in this case).
+        value = want_return_eq_5(bo_returns_string)(always_returns_1)()
+        self.assertEqual(value, 'not satisfied')
+        value = want_return_eq_5(bo_returns_tuple)(always_returns_1)()
+        self.assertEqual(value, ('bo', 1, 5))
 
 
     def end_of_loop_or_report(self, test_func):
+        '''End-of-loop or report functionality.   Does the right thing happen?
+        The complex case is failure every time,  so that is what gets tested.
+        '''
         t0 = time.time()
         oc = test_func(eola)(one)()
         t1 = time.time() - t0
@@ -130,16 +155,18 @@ class FooTest(FooBase):
 
 
     def test_end_of_loop(self):
+        # Does the end_of_loop functionality behave properly?
         self.end_of_loop_or_report(test_end_of_loop)
 
 
     def test_report(self):
+        # Does the report functionality behave properly?
         self.end_of_loop_or_report(test_report)
 
 
     def test_report_under_success(self):
-        '''works same under both.   No need to check.
-        Make it j
+        '''works same under both success and failure.   Failure already tested,
+        no need to check success behavior.
         '''
         self.assertTrue( False )
 
@@ -147,6 +174,14 @@ class FooTest(FooBase):
     def test_good_outcome(self):
         func = self.try_hard(lambda:1)
         self.assertEqual(func(), 1)
+
+
+    def test_max_tries(self):
+        # how to do so?
+        # probably have to watch for printed messages.
+        self.assertTrue( False )
+
+
 
 
 ft = FooTest()
