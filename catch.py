@@ -1,15 +1,11 @@
-'''
-martin fowler
-What did we do well?
-What have we learned?
-What can we do better?
-What puzzles us?
-http://martinfowler.com/articles/richardsonMaturityModel.html
-'''
+import functools
 
 
-def catch(Exc, action=lambda E,e: (E, e), reraise=True, *a, **k): 
+def catch(Exc, action=lambda E,e: (E, e), reraise=True, default=None, *a, **k): 
     '''
+    Catch a fatal exception and perform some action.
+    Q.  return something if not reraising?
+    NOTE reraise overrides default
     '''
     def outer(func):
         @functools.wraps(func)
@@ -20,42 +16,57 @@ def catch(Exc, action=lambda E,e: (E, e), reraise=True, *a, **k):
                 action(Exc, exc)
                 if reraise:
                     raise
+                elif default:
+                    return default(func, E, e, action, *pos, **kw)
         return inner
     return outer
 
 
-class FooE(Exception): pass
+#def catch(Exc, action=lambda E,e: (E, e), reraise=True, *a, **k): 
+
+def f5():
+    return 1/0
+
+@catch(ZeroDivisionError, reraise=False)
+def f6():
+    return 1/0
+
+@catch(ZeroDivisionError, action=logit, reraise=False)
+def f7():
+    return 1/0
 
 
-def fx():
-    if random.random() < 0.05:
-        raise FooE('fooey')
-    return random.choice(range(11))
 
 
-def f1():
-    return fx()
+def repeat_until_no_exception(Exc, max_tries=5, 
+        bad_outcome = lambda mt, r, *a, **k: 'no good result: %s attempts' % mt,
+        report      = lambda *a, **k: None,
+        end_of_loop = lambda *a, **k: None,
+    ): 
+    '''
+    Arguments:
+        Exc:  Exception
+        max_tries: int > 0
+        bad_outcome: a function,    default: message string
+        report: a function,         default == no op
+        end_of_loop: a function,    default: no op
 
-
-def logit(E, e):
-    print E, e
-
-
-@catch(FooE, logit)
-def f2():
-    return fx()
-
-
-@repeat_until_satisfied(lambda r: r<2, max_tries=3, report=report)
-@catch(FooE, logit, False)
-def f3():
-    return fx()
-
-
-@catch(FooE, logit, False)
-@repeat_until_satisfied(lambda r: r<2, max_tries=3)
-def f4():
-    return fx()
-
+    Return:
+        a decorator!
+    '''
+    def outer(func):
+        @functools.wraps(func)
+        def inner(*pos, **kw):
+            i = 0
+            while i < max_tries:
+                i += 1
+                try:
+                    return func(*pos, **kw)
+                except Exc, exc:
+                    report(func, i, max_tries, result, *pos, **kw)
+                end_of_loop(i, max_tries, result, *pos, **kw)
+            return bad_outcome(max_tries, result, *pos, **kw)
+        return inner
+    return outer
 
 
